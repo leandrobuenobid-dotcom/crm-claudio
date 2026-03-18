@@ -711,11 +711,11 @@ async function gsLoad(){
       fetch(GS_URL+'?aba=Semanal').then(r=>r.json()),
     ]);
     const cd=v=>cleanDate(v);
-    if(rC.values?.length>1){clientes=rC.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToCliente(r);o.dataCad=cd(o.dataCad);o.ultimoContato=cd(o.ultimoContato);o.ultimoPedido=cd(o.ultimoPedido);return o;});DB.set('clientes',clientes);}
-    if(rP.values?.length>1){prospects=rP.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToProspect(r);o.dataProsp=cd(o.dataProsp);o.dataPed=cd(o.dataPed);return o;});DB.set('prospects',prospects);}
-    if(rV.values?.length>1){vendas=rV.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToVenda(r);o.data=cd(o.data);return o;});DB.set('vendas',vendas);}
-    if(rCt.values?.length>1){contatos=rCt.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToContato(r);o.data=cd(o.data);o.proxContato=cd(o.proxContato);return o;});DB.set('contatos',contatos);}
-    if(rS.values?.length>1){semanal=rS.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToSemanal(r);o.inicio=cd(o.inicio);o.fim=cd(o.fim);return o;});DB.set('semanal',semanal);}
+    if(rC.values?.length>1){clientes=rC.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToCliente(r);o.dataCad=cd(o.dataCad);o.ultimoContato=cd(o.ultimoContato);o.ultimoPedido=cd(o.ultimoPedido);return o;});DB.set('clientes',clientes,false);}
+    if(rP.values?.length>1){prospects=rP.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToProspect(r);o.dataProsp=cd(o.dataProsp);o.dataPed=cd(o.dataPed);return o;});DB.set('prospects',prospects,false);}
+    if(rV.values?.length>1){vendas=rV.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToVenda(r);o.data=cd(o.data);return o;});DB.set('vendas',vendas,false);}
+    if(rCt.values?.length>1){contatos=rCt.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToContato(r);o.data=cd(o.data);o.proxContato=cd(o.proxContato);return o;});DB.set('contatos',contatos,false);}
+    if(rS.values?.length>1){semanal=rS.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToSemanal(r);o.inicio=cd(o.inicio);o.fim=cd(o.fim);return o;});DB.set('semanal',semanal,false);}
     setSyncStatus('ok');return true;
   }catch(e){console.error('gsLoad',e);setSyncStatus('error',e.message?.substring(0,40));return false;}
 }
@@ -742,7 +742,7 @@ async function gsSync(aba){
 // ════════════════════════════════════
 const DB={
   get:(k,d=[])=>{try{return JSON.parse(localStorage.getItem('tez_claudio_'+k))??d;}catch{return d;}},
-  set:(k,v)=>{localStorage.setItem('tez_claudio_'+k,JSON.stringify(v));const m={clientes:'Clientes',prospects:'Prospects',vendas:'Vendas',contatos:'Contatos',semanal:'Semanal'};if(m[k])gsSync(m[k]);}
+  set:(k,v,sync=true)=>{localStorage.setItem('tez_claudio_'+k,JSON.stringify(v));if(!sync)return;const m={clientes:'Clientes',prospects:'Prospects',vendas:'Vendas',contatos:'Contatos',semanal:'Semanal'};if(m[k])gsSync(m[k]);}
 };
 
 let clientes  = DB.get('clientes');
@@ -760,7 +760,7 @@ if(!clientes.length){
     {id:'C004',nome:'MONET IMPORTAÇÃO',cidade:'Goiânia',phone:'',responsavel:'',freq:'Semanal',perfil:'A',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-18',ngStatus:'nao',obs:''},
     {id:'C005',nome:'DECOR COLORS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-03',ultimoPedido:'2026-02-13',ngStatus:'nao',obs:''},
   ];
-  DB.set('clientes',clientes);
+  DB.set('clientes',clientes,false);
 }
 if(!prospects.length){
   prospects=[
@@ -768,7 +768,7 @@ if(!prospects.length){
     {id:'PR002',nome:'EVEREST TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'B',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-05',valorPed:162,obs:'Alex era cliente da época Renill'},
     {id:'PR003',nome:'HIPER TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'A',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-13',valorPed:3600,obs:'Wellington Junior, muito potencial'},
   ];
-  DB.set('prospects',prospects);
+  DB.set('prospects',prospects,false);
 }
 if(!vendas.length){
   vendas=[
@@ -776,7 +776,7 @@ if(!vendas.length){
     {id:'V002',clienteId:'C004',data:'2026-02-25',pedido:'2859',valor:2222,valorNG:0,obs:''},
     {id:'V003',clienteId:'C002',data:'2026-02-23',pedido:'2852',valor:811.4,valorNG:0,obs:''},
   ];
-  DB.set('vendas',vendas);
+  DB.set('vendas',vendas,false);
 }
 
 // ════════════════════════════════════
@@ -979,7 +979,7 @@ function renderAgenda(){
         </div>
       </div>
       <div class="agenda-actions">
-        ${c.phone?`<a href="https://wa.me/55${c.phone.replace(/\D/g,'')}" target="_blank"><button class="btn btn-secondary btn-sm">💬</button></a>`:''}
+        ${c.phone?`<a href="https://wa.me/55${c.phone.replace(/\D/g,'')}" target="_blank"><button class="btn btn-secondary btn-sm">💬 WA</button></a>`:''}
         <button class="btn btn-primary btn-sm" onclick="abrirContatoAgenda('${c.id}')">✔ Registrar</button>
       </div>
     </div>`;
@@ -1170,32 +1170,61 @@ function renderProspeccao(){
   const novosMesN=prospects.filter(p=>p.status==='Fechado'&&(p.dataPed||'').startsWith(m)).length;
   const novosSemN=prospects.filter(p=>p.status==='Fechado'&&(p.dataPed||'')>=seg&&(p.dataPed||'')<=today()).length;
   const fechados=prospects.filter(p=>p.status==='Fechado').length;
+  const ativos=prospects.filter(p=>p.status!=='Fechado'&&p.status!=='Perdido').length;
 
   document.getElementById('pr-st-mes').textContent=novosMesN;
   document.getElementById('pr-st-mes-sub').textContent=`${Math.round(novosMesN/8*100)}% da meta (8/mês)`;
   document.getElementById('pr-st-sem').textContent=novosSemN;
   document.getElementById('pr-st-fechados').textContent=fechados;
-  document.getElementById('badge-prosp').textContent=prospects.filter(p=>p.status!=='Fechado'&&p.status!=='Perdido').length;
-  document.getElementById('prosp-sub').textContent=`${prospects.length} prospects · ${fechados} fechados`;
+  document.getElementById('badge-prosp').textContent=ativos;
+  document.getElementById('prosp-sub').textContent=`${prospects.length} prospects · ${fechados} fechados · ${ativos} em andamento`;
 
-  const STATUS=['Contato feito','Visita agendada','Proposta enviada','Fechado','Perdido'];
-  const COLORS={'Contato feito':'pill-contato','Visita agendada':'pill-visita','Proposta enviada':'pill-proposta','Fechado':'pill-fechado','Perdido':'pill-perdido'};
+  const STATUS_COLOR={'Contato feito':'pill-contato','Visita agendada':'pill-visita','Proposta enviada':'pill-proposta','Fechado':'pill-fechado','Perdido':'pill-perdido'};
+  const PERFIL_COLOR={'A':'pill-a','B':'pill-b','C':'pill-c'};
 
   const board=document.getElementById('kanban-board');
-  board.innerHTML=STATUS.map(st=>{
-    const items=prospects.filter(p=>p.status===st).sort((a,b)=>b.dataProsp.localeCompare(a.dataProsp));
-    const cards=items.map(p=>`
-      <div class="kanban-card" onclick="editarProspect('${p.id}')">
-        <div class="kanban-card-name">${p.nome}</div>
-        <div class="kanban-card-meta">${p.cidade} · ${p.perfil} · ${fmt(p.dataProsp)}</div>
-        ${p.valorPed?`<div style="font-size:11px;color:var(--accent);font-weight:600;margin-top:4px;">${fmtM(p.valorPed)}</div>`:''}
-        ${p.obs?`<div style="font-size:11px;color:var(--text3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.obs.substring(0,60)}</div>`:''}
-      </div>`).join('');
-    return`<div class="kanban-col">
-      <div class="kanban-col-title"><span class="pill ${COLORS[st]}">${st}</span><span class="kanban-count">${items.length}</span></div>
-      ${cards||'<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0;">Vazio</div>'}
-    </div>`;
-  }).join('');
+  const list=[...prospects].sort((a,b)=>{
+    const ord={'Proposta enviada':0,'Visita agendada':1,'Contato feito':2,'Fechado':3,'Perdido':4};
+    return (ord[a.status]??5)-(ord[b.status]??5)||b.dataProsp.localeCompare(a.dataProsp);
+  });
+
+  if(!list.length){board.innerHTML='<div class="empty"><div class="empty-icon">🎯</div>Nenhum prospect cadastrado.</div>';return;}
+
+  board.innerHTML=`<div style="overflow-x:auto;border-radius:var(--r);box-shadow:var(--sh);width:100%;">
+    <table style="width:100%;border-collapse:collapse;background:var(--surface);table-layout:auto;">
+      <thead>
+        <tr>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Nome</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Cidade</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Origem</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Perfil</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Status</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Data</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">1º Pedido</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Valor</th>
+          <th style="background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;">Observações</th>
+          <th style="background:var(--surface2);padding:8px 12px;border-bottom:1px solid var(--border);"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(p=>`<tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          <td style="padding:7px 12px;font-size:12px;font-weight:600;white-space:nowrap;">${p.nome}</td>
+          <td style="padding:7px 12px;font-size:12px;white-space:nowrap;">${p.cidade||'—'}</td>
+          <td style="padding:7px 12px;font-size:12px;white-space:nowrap;">${p.origem||'—'}</td>
+          <td style="padding:7px 12px;"><span class="pill ${PERFIL_COLOR[p.perfil]||'pill-sem'}">${p.perfil||'—'}</span></td>
+          <td style="padding:7px 12px;"><span class="pill ${STATUS_COLOR[p.status]||'pill-sem'}">${p.status}</span></td>
+          <td style="padding:7px 12px;font-size:12px;white-space:nowrap;color:var(--text2);font-family:'JetBrains Mono',monospace;">${fmt(p.dataProsp)}</td>
+          <td style="padding:7px 12px;font-size:12px;white-space:nowrap;color:var(--text2);font-family:'JetBrains Mono',monospace;">${fmt(p.dataPed)}</td>
+          <td style="padding:7px 12px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;">${p.valorPed>0?fmtM(p.valorPed):'—'}</td>
+          <td style="padding:7px 12px;font-size:12px;color:var(--text2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.obs||'—'}</td>
+          <td style="padding:7px 12px;white-space:nowrap;">
+            <button class="btn btn-ghost btn-sm" onclick="editarProspect('${p.id}')">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deletarProspect('${p.id}')">🗑</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
 }
 
 function salvarProspect(){
@@ -1255,6 +1284,13 @@ function editarProspect(id){
     DB.set('prospects',prospects);renderProspeccao();
   });
   document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
+}
+
+function deletarProspect(id){
+  const p=prospects.find(x=>x.id===id);
+  openModal('Remover Prospect',`<p style="font-size:14px;color:var(--text2)">Remover <strong>${p?.nome}</strong>?</p>`,()=>{
+    prospects=prospects.filter(x=>x.id!==id);DB.set('prospects',prospects);renderProspeccao();toast('🗑 Removido');
+  });
 }
 
 // ════════════════════════════════════
