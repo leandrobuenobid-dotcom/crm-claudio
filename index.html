@@ -478,7 +478,7 @@ tbody tr:hover td{background:var(--surface2);}
   </div>
 
   <!-- Kanban -->
-  <div class="kanban" id="kanban-board"></div>
+  <div id="kanban-board" style="width:100%;margin-top:4px;"></div>
 </div>
 
 <!-- ══════════ VENDAS ══════════ -->
@@ -979,7 +979,10 @@ function renderAgenda(){
         </div>
       </div>
       <div class="agenda-actions">
-        ${c.phone?`<a href="https://wa.me/55${c.phone.replace(/\D/g,'')}" target="_blank"><button class="btn btn-secondary btn-sm">💬 WA</button></a>`:''}
+        ${c.phone
+          ? `<a href="https://wa.me/55${c.phone.replace(/\D/g,'')}" target="_blank"><button class="btn btn-secondary btn-sm">💬 WA</button></a>`
+          : `<a href="https://web.whatsapp.com" target="_blank"><button class="btn btn-secondary btn-sm" style="opacity:.5;" title="Sem telefone cadastrado">💬 WA</button></a>`
+        }
         <button class="btn btn-primary btn-sm" onclick="abrirContatoAgenda('${c.id}')">✔ Registrar</button>
       </div>
     </div>`;
