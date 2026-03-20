@@ -1162,7 +1162,7 @@ function editarCliente(id){
     };
     DB.set('clientes',clientes);renderClientes();toast('✅ Cliente atualizado!');
   });
-  document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
+  document.getElementById('modal-confirm-btn').style.display='';document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
 }
 
 function deletarCliente(id){
@@ -1329,7 +1329,7 @@ function editarProspect(id){
     }
     DB.set('prospects',prospects);renderProspeccao();
   });
-  document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
+  document.getElementById('modal-confirm-btn').style.display='';document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
 }
 
 function deletarProspect(id){
@@ -1404,7 +1404,7 @@ function editarVenda(id){
     vendas[idx]={...vendas[idx],clienteId:document.getElementById('ev-cli').value,data:document.getElementById('ev-data').value,pedido:document.getElementById('ev-pedido').value,valor,valorNG:ng,obs:document.getElementById('ev-obs').value.trim()};
     DB.set('vendas',vendas);renderVendas();toast('✅ Venda atualizada!');
   });
-  document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
+  document.getElementById('modal-confirm-btn').style.display='';document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
 }
 
 function deletarVenda(id){
