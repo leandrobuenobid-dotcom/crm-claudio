@@ -1605,22 +1605,7 @@ function init(){
     }
   });
 
-  // Auto-reload a cada 5 minutos, mas só se não houve edição local nos últimos 3 minutos
-  setInterval(()=>{
-    const agora=Date.now();
-    const ultimaEdicao=parseInt(localStorage.getItem('tez_claudio_lastEdit')||'0');
-    if(agora-ultimaEdicao < 180000) return; // Não recarrega se editou nos últimos 3 min
-    gsLoad().then(ok=>{
-      if(!ok)return;
-      const viewAtiva=document.querySelector('.view.active')?.id?.replace('view-','');
-      if(viewAtiva==='agenda')renderAgenda();
-      if(viewAtiva==='clientes')renderClientes();
-      if(viewAtiva==='prospeccao')renderProspeccao();
-      if(viewAtiva==='vendas')renderVendas();
-      if(viewAtiva==='semanal')renderSemanal();
-      if(viewAtiva==='gerencial')renderGerencial();
-    });
-  },300000);
+  // Sync automático desativado - dados são enviados ao Sheets em cada ação do usuário
 }
 
 checkAuth();
