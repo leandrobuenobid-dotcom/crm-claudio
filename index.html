@@ -711,15 +711,44 @@ async function gsLoad(){
       fetch(GS_URL+'?aba=Semanal').then(r=>r.json()),
     ]);
     const cd=v=>cleanDate(v);
-    if(rC.values?.length>1){clientes=rC.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToCliente(r);o.dataCad=cd(o.dataCad);o.ultimoContato=cd(o.ultimoContato);o.ultimoPedido=cd(o.ultimoPedido);return o;});DB.set('clientes',clientes,false);}
+    if(rC.values?.length>1){
+      const fromSheetsC=rC.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToCliente(r);o.dataCad=cd(o.dataCad);o.ultimoContato=cd(o.ultimoContato);o.ultimoPedido=cd(o.ultimoPedido);return o;});
+      const localC=DB.get('clientes',[]);
+      clientes=fromSheetsC.map(sc=>{
+        const lc=localC.find(x=>x.id===sc.id);
+        if(!lc) return sc;
+        return{...sc,
+          ultimoContato:(lc.ultimoContato&&(!sc.ultimoContato||lc.ultimoContato>sc.ultimoContato))?lc.ultimoContato:sc.ultimoContato,
+          ultimoPedido:(lc.ultimoPedido&&(!sc.ultimoPedido||lc.ultimoPedido>sc.ultimoPedido))?lc.ultimoPedido:sc.ultimoPedido
+        };
+      });
+      DB.set('clientes',clientes,false);
+    }
     if(rP.values?.length>1){
       const fromSheets=rP.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToProspect(r);o.dataProsp=cd(o.dataProsp);o.dataPed=cd(o.dataPed);return o;});
       const localP=DB.get('prospects',[]);
-      prospects=fromSheets.map(sp=>{
-        const lp=localP.find(x=>x.id===sp.id);
-        if(lp&&lp.status&&lp.status!==sp.status)return{...sp,status:lp.status,dataPed:lp.dataPed||sp.dataPed,valorPed:lp.valorPed||sp.valorPed};
-        return sp;
-      });
+      // Se o Sheets tem menos dados que o local, manter o local intacto
+      if(localP.length>0){
+        prospects=fromSheets.map(sp=>{
+          const lp=localP.find(x=>x.id===sp.id);
+          if(!lp) return sp;
+          // Para cada campo, manter o local se for diferente do Sheets (significa que foi editado localmente)
+          return{
+            ...sp,
+            nome:lp.nome||sp.nome,
+            cidade:lp.cidade||sp.cidade,
+            origem:lp.origem||sp.origem,
+            perfil:lp.perfil||sp.perfil,
+            status:lp.status||sp.status,
+            dataProsp:lp.dataProsp||sp.dataProsp,
+            dataPed:lp.dataPed||sp.dataPed,
+            valorPed:lp.valorPed||sp.valorPed,
+            obs:lp.obs||sp.obs
+          };
+        });
+      } else {
+        prospects=fromSheets;
+      }
       DB.set('prospects',prospects,false);
     }
     if(rV.values?.length>1){vendas=rV.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToVenda(r);o.data=cd(o.data);return o;});DB.set('vendas',vendas,false);}
