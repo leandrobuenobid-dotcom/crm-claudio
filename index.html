@@ -1223,8 +1223,8 @@ function renderProspeccao(){
           <td style="padding:6px 10px;font-size:12px;font-weight:600;white-space:nowrap;">${p.nome}</td>
           <td style="padding:6px 10px;font-size:12px;white-space:nowrap;">${p.cidade||'—'}</td>
           <td style="padding:6px 10px;font-size:12px;white-space:nowrap;">${p.origem||'—'}</td>
-          <td style="padding:6px 10px;"><span class="pill ${PERFIL_COLOR[p.perfil]||'pill-sem'}">${p.perfil||'—'}</span></td>
-          <td style="padding:6px 10px;"><span class="pill ${STATUS_COLOR[p.status]||'pill-sem'}">${p.status}</span></td>
+          <td style="padding:6px 10px;"><span class="pill ${({A:"pill-a",B:"pill-b",C:"pill-c"})[p.perfil]||'pill-sem'}">${p.perfil||'—'}</span></td>
+          <td style="padding:6px 10px;"><span class="pill ${({"Fechado":"pill-fechado","Contato feito":"pill-contato","Visita agendada":"pill-visita","Proposta enviada":"pill-proposta","Perdido":"pill-perdido"})[p.status]||'pill-sem'}">${p.status}</span></td>
           <td style="padding:6px 10px;font-size:12px;white-space:nowrap;color:var(--text2);font-family:'JetBrains Mono',monospace;">${fmt(p.dataProsp)}</td>
           <td style="padding:6px 10px;font-size:12px;white-space:nowrap;color:var(--text2);font-family:'JetBrains Mono',monospace;">${fmt(p.dataPed)}</td>
           <td style="padding:6px 10px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;">${p.valorPed>0?fmtM(p.valorPed):'—'}</td>
@@ -1262,13 +1262,11 @@ function salvarProspect(){
 
 function verProspect(id){
   const p=prospects.find(x=>x.id===id);if(!p)return;
-  const PERF={A:'pill-a',B:'pill-b',C:'pill-c'};
-  const ST={Fechado:'pill-fechado','Contato feito':'pill-contato','Visita agendada':'pill-visita','Proposta enviada':'pill-proposta',Perdido:'pill-perdido'};
   openModal(p.nome,`
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <span class="pill ${PERFIL_COLOR[p.perfil]||'pill-sem'}">${p.perfil||'—'}</span>
-        <span class="pill ${STATUS_COLOR[p.status]||'pill-sem'}">${p.status}</span>
+        <span class="pill ${({A:"pill-a",B:"pill-b",C:"pill-c"})[p.perfil]||'pill-sem'}">${p.perfil||'—'}</span>
+        <span class="pill ${({"Fechado":"pill-fechado","Contato feito":"pill-contato","Visita agendada":"pill-visita","Proposta enviada":"pill-proposta","Perdido":"pill-perdido"})[p.status]||'pill-sem'}">${p.status}</span>
         ${p.cidade?'<span style="font-size:12px;color:var(--text2);">📍 '+p.cidade+'</span>':''}
         ${p.origem?'<span style="font-size:12px;color:var(--text2);">📌 '+p.origem+'</span>':''}
       </div>
