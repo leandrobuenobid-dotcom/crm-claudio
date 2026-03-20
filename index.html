@@ -780,7 +780,7 @@ async function gsSync(aba){
 // ════════════════════════════════════
 const DB={
   get:(k,d=[])=>{try{return JSON.parse(localStorage.getItem('tez_claudio_'+k))??d;}catch{return d;}},
-  set:(k,v,sync=true)=>{localStorage.setItem('tez_claudio_'+k,JSON.stringify(v));if(!sync)return;const m={clientes:'Clientes',prospects:'Prospects',vendas:'Vendas',contatos:'Contatos',semanal:'Semanal'};if(m[k])gsSync(m[k]);}
+  set:(k,v,sync=true)=>{localStorage.setItem('tez_claudio_'+k,JSON.stringify(v));if(!sync)return;localStorage.setItem('tez_claudio_lastEdit',Date.now().toString());const m={clientes:'Clientes',prospects:'Prospects',vendas:'Vendas',contatos:'Contatos',semanal:'Semanal'};if(m[k])gsSync(m[k]);}
 };
 
 let clientes  = DB.get('clientes');
@@ -1605,7 +1605,11 @@ function init(){
     }
   });
 
+  // Auto-reload a cada 5 minutos, mas só se não houve edição local nos últimos 3 minutos
   setInterval(()=>{
+    const agora=Date.now();
+    const ultimaEdicao=parseInt(localStorage.getItem('tez_claudio_lastEdit')||'0');
+    if(agora-ultimaEdicao < 180000) return; // Não recarrega se editou nos últimos 3 min
     gsLoad().then(ok=>{
       if(!ok)return;
       const viewAtiva=document.querySelector('.view.active')?.id?.replace('view-','');
@@ -1616,7 +1620,7 @@ function init(){
       if(viewAtiva==='semanal')renderSemanal();
       if(viewAtiva==='gerencial')renderGerencial();
     });
-  },60000);
+  },300000);
 }
 
 checkAuth();
