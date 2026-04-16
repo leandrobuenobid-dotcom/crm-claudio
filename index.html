@@ -408,24 +408,26 @@ tbody tr:hover td{background:var(--surface2);}
 const GS_URL = 'https://script.google.com/macros/s/AKfycbwr0VsPuspB493Fyf31WX3r6TJgWrB6kEZWVUkQkrFalE-YvovI4zIB6_GAe3BqQcihIw/exec';
 
 const COLS = {
-  Clientes:  ['ID','Nome','Cidade','Phone','Responsavel','Freq','Perfil','DataCad','UltimoContato','UltimoPedido','NGStatus','Obs'],
-  Prospects: ['ID','Nome','Cidade','Origem','Perfil','Status','DataProsp','DataPed','ValorPed','Obs'],
+  Clientes:  ['ID','Nome','Cidade','Phone','Responsavel','Freq','Perfil','DataCad','UltimoContato','UltimoPedido','NGStatus','Obs','UpdatedAt'],
+  Prospects: ['ID','Nome','Cidade','Origem','Perfil','Status','DataProsp','DataPed','ValorPed','Obs','UpdatedAt'],
   Vendas:    ['ID','ClienteID','Data','Pedido','Valor','ValorNG','Obs'],
   Contatos:  ['ID','ClienteID','Data','Canal','Resultado','NG','ProxContato','Obs'],
   Semanal:   ['ID','Inicio','Fim','Fat','Novos','A','B','C','NG','Obs']
 };
 
-function rowToCliente(r){return{id:r[0]||'',nome:r[1]||'',cidade:r[2]||'',phone:String(r[3]||'').replace(/\D/g,'') ? String(r[3]||'') : '',responsavel:r[4]||'',freq:r[5]||'Quinzenal',perfil:r[6]||'',dataCad:r[7]||'',ultimoContato:r[8]||'',ultimoPedido:r[9]||'',ngStatus:r[10]||'nao',obs:r[11]||''};}
-function rowToProspect(r){return{id:r[0]||'',nome:r[1]||'',cidade:r[2]||'',origem:r[3]||'',perfil:r[4]||'B',status:r[5]||'Contato feito',dataProsp:r[6]||'',dataPed:r[7]||'',valorPed:parseFloat(r[8])||0,obs:r[9]||''};}
+function rowToCliente(r){return{id:r[0]||'',nome:r[1]||'',cidade:r[2]||'',phone:String(r[3]||'').replace(/\D/g,'')?String(r[3]||''):'',responsavel:r[4]||'',freq:r[5]||'Quinzenal',perfil:r[6]||'',dataCad:r[7]||'',ultimoContato:r[8]||'',ultimoPedido:r[9]||'',ngStatus:r[10]||'nao',obs:r[11]||'',updatedAt:r[12]||''};}
+function rowToProspect(r){return{id:r[0]||'',nome:r[1]||'',cidade:r[2]||'',origem:r[3]||'',perfil:r[4]||'B',status:r[5]||'Contato feito',dataProsp:r[6]||'',dataPed:r[7]||'',valorPed:parseFloat(r[8])||0,obs:r[9]||'',updatedAt:r[10]||''};}
 function rowToVenda(r){return{id:r[0]||'',clienteId:r[1]||'',data:r[2]||'',pedido:r[3]||'',valor:parseFloat(r[4])||0,valorNG:parseFloat(r[5])||0,obs:r[6]||''};}
 function rowToContato(r){return{id:r[0]||'',clienteId:r[1]||'',data:r[2]||'',canal:r[3]||'',resultado:r[4]||'',ng:r[5]||'0',proxContato:r[6]||'',obs:r[7]||''};}
 function rowToSemanal(r){return{id:r[0]||'',inicio:r[1]||'',fim:r[2]||'',fat:parseFloat(r[3])||0,novos:parseInt(r[4])||0,a:parseInt(r[5])||0,b:parseInt(r[6])||0,c:parseInt(r[7])||0,ng:parseFloat(r[8])||0,obs:r[9]||''};}
 
-function clienteToRow(c){return[c.id,c.nome,c.cidade,c.phone,c.responsavel,c.freq,c.perfil,c.dataCad,c.ultimoContato,c.ultimoPedido,c.ngStatus,c.obs];}
-function prospectToRow(p){return[p.id,p.nome,p.cidade,p.origem,p.perfil,p.status,p.dataProsp,p.dataPed,String(p.valorPed),p.obs];}
+function clienteToRow(c){return[c.id,c.nome,c.cidade,c.phone,c.responsavel,c.freq,c.perfil,c.dataCad,c.ultimoContato,c.ultimoPedido,c.ngStatus,c.obs,c.updatedAt||''];}
+function prospectToRow(p){return[p.id,p.nome,p.cidade,p.origem,p.perfil,p.status,p.dataProsp,p.dataPed,String(p.valorPed),p.obs,p.updatedAt||''];}
 function vendaToRow(v){return[v.id,v.clienteId,v.data,v.pedido,String(v.valor),String(v.valorNG),v.obs];}
 function contatoToRow(c){return[c.id,c.clienteId,c.data,c.canal,c.resultado,c.ng,c.proxContato,c.obs];}
 function semanalToRow(s){return[s.id,s.inicio,s.fim,String(s.fat),String(s.novos),String(s.a),String(s.b),String(s.c),String(s.ng),s.obs];}
+
+const nowTs=()=>new Date().toISOString();
 
 function setSyncStatus(s,msg){
   const el=document.getElementById('sync-status');if(!el)return;
@@ -434,7 +436,7 @@ function setSyncStatus(s,msg){
 }
 
 // ════════════════════════════════════
-// gsLoad — CORRIGIDO: merge inteligente igual ao CRM do Cleytim
+// gsLoad — merge que respeita edições locais via updatedAt
 // ════════════════════════════════════
 async function gsLoad(){
   setSyncStatus('syncing');
@@ -449,7 +451,7 @@ async function gsLoad(){
     ]);
     const cd=v=>cleanDate(v);
 
-    // CLIENTES — merge inteligente: preserva novos locais + prefere data mais recente
+    // CLIENTES — local vence se updatedAt local > updatedAt do Sheets
     if(rC.values?.length>1){
       const fromSheets=rC.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToCliente(r);o.dataCad=cd(o.dataCad);o.ultimoContato=cd(o.ultimoContato);o.ultimoPedido=cd(o.ultimoPedido);return o;});
       const local=DB.get('clientes',[]);
@@ -458,6 +460,10 @@ async function gsLoad(){
       const merged=fromSheets.map(sc=>{
         const lc=local.find(x=>x.id===sc.id);
         if(!lc)return sc;
+        // Se local tem updatedAt mais recente, local vence em tudo
+        const localMaisRecente=lc.updatedAt&&(!sc.updatedAt||lc.updatedAt>sc.updatedAt);
+        if(localMaisRecente)return lc;
+        // Sheets é mais recente: usa Sheets mas preserva campos específicos
         return{...sc,
           ultimoContato:(lc.ultimoContato&&(!sc.ultimoContato||lc.ultimoContato>sc.ultimoContato))?lc.ultimoContato:sc.ultimoContato,
           ultimoPedido:(lc.ultimoPedido&&(!sc.ultimoPedido||lc.ultimoPedido>sc.ultimoPedido))?lc.ultimoPedido:sc.ultimoPedido,
@@ -468,17 +474,23 @@ async function gsLoad(){
       DB.set('clientes',clientes,false);
     }
 
-    // PROSPECTS — merge inteligente: preserva novos locais
+    // PROSPECTS — local vence se updatedAt local > updatedAt do Sheets
     if(rP.values?.length>1){
       const fromSheets=rP.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToProspect(r);o.dataProsp=cd(o.dataProsp);o.dataPed=cd(o.dataPed);return o;});
       const local=DB.get('prospects',[]);
       const idsSheets=new Set(fromSheets.map(x=>x.id));
       const novosLocais=local.filter(x=>!idsSheets.has(x.id));
-      prospects=[...novosLocais,...fromSheets];
+      const merged=fromSheets.map(sc=>{
+        const lc=local.find(x=>x.id===sc.id);
+        if(!lc)return sc;
+        const localMaisRecente=lc.updatedAt&&(!sc.updatedAt||lc.updatedAt>sc.updatedAt);
+        return localMaisRecente?lc:sc;
+      });
+      prospects=[...novosLocais,...merged];
       DB.set('prospects',prospects,false);
     }
 
-    // VENDAS — merge inteligente: preserva novos locais
+    // VENDAS — merge simples (sem updatedAt, registros raramente editados)
     if(rV.values?.length>1){
       const fromSheets=rV.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToVenda(r);o.data=cd(o.data);return o;});
       const local=DB.get('vendas',[]);
@@ -488,7 +500,7 @@ async function gsLoad(){
       DB.set('vendas',vendas,false);
     }
 
-    // CONTATOS — merge inteligente: preserva novos locais
+    // CONTATOS — merge simples
     if(rCt.values?.length>1){
       const fromSheets=rCt.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToContato(r);o.data=cd(o.data);o.proxContato=cd(o.proxContato);return o;});
       const local=DB.get('contatos',[]);
@@ -498,7 +510,7 @@ async function gsLoad(){
       DB.set('contatos',contatos,false);
     }
 
-    // SEMANAL — merge inteligente: preserva novos locais
+    // SEMANAL — merge simples
     if(rS.values?.length>1){
       const fromSheets=rS.values.slice(1).filter(r=>r[0]).map(r=>{const o=rowToSemanal(r);o.inicio=cd(o.inicio);o.fim=cd(o.fim);return o;});
       const local=DB.get('semanal',[]);
@@ -555,19 +567,19 @@ let semanal   = DB.get('semanal');
 // SEED
 if(!clientes.length){
   clientes=[
-    {id:'C001',nome:'PRECISÃO COMÉRCIO DE TINTAS',cidade:'Rio Verde',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-03',ngStatus:'nao',obs:''},
-    {id:'C002',nome:'COR E VIDA TINTAS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-15',ngStatus:'nao',obs:''},
-    {id:'C003',nome:'ART COLORS TINTAS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Semanal',perfil:'A',dataCad:'2026-01-01',ultimoContato:'2026-03-11',ultimoPedido:'2026-03-06',ngStatus:'nao',obs:''},
-    {id:'C004',nome:'MONET IMPORTAÇÃO',cidade:'Goiânia',phone:'',responsavel:'',freq:'Semanal',perfil:'A',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-18',ngStatus:'nao',obs:''},
-    {id:'C005',nome:'DECOR COLORS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-03',ultimoPedido:'2026-02-13',ngStatus:'nao',obs:''},
+    {id:'C001',nome:'PRECISÃO COMÉRCIO DE TINTAS',cidade:'Rio Verde',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-03',ngStatus:'nao',obs:'',updatedAt:''},
+    {id:'C002',nome:'COR E VIDA TINTAS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-15',ngStatus:'nao',obs:'',updatedAt:''},
+    {id:'C003',nome:'ART COLORS TINTAS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Semanal',perfil:'A',dataCad:'2026-01-01',ultimoContato:'2026-03-11',ultimoPedido:'2026-03-06',ngStatus:'nao',obs:'',updatedAt:''},
+    {id:'C004',nome:'MONET IMPORTAÇÃO',cidade:'Goiânia',phone:'',responsavel:'',freq:'Semanal',perfil:'A',dataCad:'2026-01-01',ultimoContato:'2026-03-16',ultimoPedido:'2026-02-18',ngStatus:'nao',obs:'',updatedAt:''},
+    {id:'C005',nome:'DECOR COLORS',cidade:'Goiânia',phone:'',responsavel:'',freq:'Quinzenal',perfil:'B',dataCad:'2026-01-01',ultimoContato:'2026-03-03',ultimoPedido:'2026-02-13',ngStatus:'nao',obs:'',updatedAt:''},
   ];
   DB.set('clientes',clientes,false);
 }
 if(!prospects.length){
   prospects=[
-    {id:'PR001',nome:'MUNDIAL TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'B',status:'Contato feito',dataProsp:'2026-02-24',dataPed:'',valorPed:0,obs:'Eduardo é o dono, trabalha com Renill'},
-    {id:'PR002',nome:'EVEREST TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'B',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-05',valorPed:162,obs:'Alex era cliente da época Renill'},
-    {id:'PR003',nome:'HIPER TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'A',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-13',valorPed:3600,obs:'Wellington Junior, muito potencial'},
+    {id:'PR001',nome:'MUNDIAL TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'B',status:'Contato feito',dataProsp:'2026-02-24',dataPed:'',valorPed:0,obs:'Eduardo é o dono, trabalha com Renill',updatedAt:''},
+    {id:'PR002',nome:'EVEREST TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'B',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-05',valorPed:162,obs:'Alex era cliente da época Renill',updatedAt:''},
+    {id:'PR003',nome:'HIPER TINTAS',cidade:'Goiânia',origem:'Visita externa',perfil:'A',status:'Fechado',dataProsp:'2026-02-24',dataPed:'2026-03-13',valorPed:3600,obs:'Wellington Junior, muito potencial',updatedAt:''},
   ];
   DB.set('prospects',prospects,false);
 }
@@ -814,8 +826,12 @@ function salvarContato(){
   const novo={id:nextId('CT',contatos),clienteId,data,canal,resultado,ng,proxContato,obs};
   contatos.unshift(novo);DB.set('contatos',contatos);
   const idx=clientes.findIndex(x=>x.id===clienteId);
-  if(idx!==-1){if(!clientes[idx].ultimoContato||data>=clientes[idx].ultimoContato){clientes[idx].ultimoContato=data;}DB.set('clientes',clientes);}
-  if(ng==='1'){const ci=clientes.findIndex(x=>x.id===clienteId);if(ci!==-1){clientes[ci].ngStatus='sim';DB.set('clientes',clientes);}}
+  if(idx!==-1){
+    if(!clientes[idx].ultimoContato||data>=clientes[idx].ultimoContato){clientes[idx].ultimoContato=data;}
+    clientes[idx].updatedAt=nowTs();
+    DB.set('clientes',clientes);
+  }
+  if(ng==='1'){const ci=clientes.findIndex(x=>x.id===clienteId);if(ci!==-1){clientes[ci].ngStatus='sim';clientes[ci].updatedAt=nowTs();DB.set('clientes',clientes);}}
   toggleForm('form-contato-agenda');
   limparBuscaCliente('ca');
   ['ca-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -842,7 +858,12 @@ function salvarVenda(tipo='rapida'){
   const novo={id:nextId('V',vendas),clienteId,data,pedido,valor,valorNG,obs};
   vendas.unshift(novo);DB.set('vendas',vendas);
   const idx=clientes.findIndex(x=>x.id===clienteId);
-  if(idx!==-1){if(!clientes[idx].ultimoPedido||data>=clientes[idx].ultimoPedido){clientes[idx].ultimoPedido=data;}if(valorNG>0)clientes[idx].ngStatus='sim';DB.set('clientes',clientes);}
+  if(idx!==-1){
+    if(!clientes[idx].ultimoPedido||data>=clientes[idx].ultimoPedido){clientes[idx].ultimoPedido=data;}
+    if(valorNG>0)clientes[idx].ngStatus='sim';
+    clientes[idx].updatedAt=nowTs();
+    DB.set('clientes',clientes);
+  }
   toggleForm('form-venda-rapida');toggleForm('form-venda-full');
   limparBuscaCliente(pref);
   ['vr-valor','vr-ng','vf-valor','vf-ng'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -899,7 +920,7 @@ function salvarCliente(){
   if(!nome){toast('⚠ Informe o nome da loja');return;}
   if(!cidade){toast('⚠ Informe a cidade');return;}
   if((phone.replace(/\D/g,'')).length<10){toast('⚠ Informe o telefone com DDD');return;}
-  const novo={id:nextId('C',clientes),nome,cidade,phone,responsavel:document.getElementById('cl-responsavel').value.trim(),freq:document.getElementById('cl-freq').value,perfil:document.getElementById('cl-perfil').value,dataCad:document.getElementById('cl-data-cad').value||today(),ultimoContato:'',ultimoPedido:'',ngStatus:document.getElementById('cl-ng-status').value,obs:document.getElementById('cl-obs').value.trim()};
+  const novo={id:nextId('C',clientes),nome,cidade,phone,responsavel:document.getElementById('cl-responsavel').value.trim(),freq:document.getElementById('cl-freq').value,perfil:document.getElementById('cl-perfil').value,dataCad:document.getElementById('cl-data-cad').value||today(),ultimoContato:'',ultimoPedido:'',ngStatus:document.getElementById('cl-ng-status').value,obs:document.getElementById('cl-obs').value.trim(),updatedAt:nowTs()};
   clientes.push(novo);DB.set('clientes',clientes);
   toggleForm('form-cliente');
   ['cl-nome','cl-cidade','cl-phone','cl-responsavel','cl-obs'].forEach(id=>document.getElementById(id).value='');
@@ -929,7 +950,7 @@ function editarCliente(id){
     if(!nome||!cidade){toast('⚠ Nome e cidade obrigatórios');return false;}
     if((phone.replace(/\D/g,'')).length<10){toast('⚠ Telefone com DDD obrigatório');return false;}
     const idx=clientes.findIndex(x=>x.id===id);
-    clientes[idx]={...clientes[idx],nome,cidade,phone,responsavel:document.getElementById('ec-responsavel').value.trim(),freq:document.getElementById('ec-freq').value,ultimoPedido:document.getElementById('ec-ultimo-pedido').value,ultimoContato:document.getElementById('ec-ultimo-contato').value,ngStatus:document.getElementById('ec-ng').value,obs:document.getElementById('ec-obs').value.trim()};
+    clientes[idx]={...clientes[idx],nome,cidade,phone,responsavel:document.getElementById('ec-responsavel').value.trim(),freq:document.getElementById('ec-freq').value,ultimoPedido:document.getElementById('ec-ultimo-pedido').value,ultimoContato:document.getElementById('ec-ultimo-contato').value,ngStatus:document.getElementById('ec-ng').value,obs:document.getElementById('ec-obs').value.trim(),updatedAt:nowTs()};
     DB.set('clientes',clientes);renderClientes();toast('✅ Cliente atualizado!');
   });
   document.getElementById('modal-confirm-btn').textContent='Salvar alterações';
@@ -1004,9 +1025,9 @@ function salvarProspect(){
   const cidade=document.getElementById('pr-cidade').value.trim();
   if(!nome||!cidade){toast('⚠ Nome e cidade obrigatórios');return;}
   const stNovo=document.getElementById('pr-status').value;
-  const novo={id:nextId('PR',prospects),nome,cidade,origem:document.getElementById('pr-origem').value,perfil:document.getElementById('pr-perfil').value,status:stNovo,dataProsp:document.getElementById('pr-data').value||today(),dataPed:document.getElementById('pr-data-ped').value||'',valorPed:parseFloat(document.getElementById('pr-valor-ped').value)||0,obs:document.getElementById('pr-obs').value.trim()};
+  const novo={id:nextId('PR',prospects),nome,cidade,origem:document.getElementById('pr-origem').value,perfil:document.getElementById('pr-perfil').value,status:stNovo,dataProsp:document.getElementById('pr-data').value||today(),dataPed:document.getElementById('pr-data-ped').value||'',valorPed:parseFloat(document.getElementById('pr-valor-ped').value)||0,obs:document.getElementById('pr-obs').value.trim(),updatedAt:nowTs()};
   if(stNovo==='Fechado'&&novo.nome){
-    const novoCliente={id:nextId('C',clientes),nome:novo.nome,cidade:novo.cidade,phone:'',responsavel:'',freq:'Quinzenal',perfil:novo.perfil||'B',dataCad:novo.dataPed||today(),ultimoContato:'',ultimoPedido:novo.dataPed||'',ngStatus:'nao',obs:'Convertido da prospecção'};
+    const novoCliente={id:nextId('C',clientes),nome:novo.nome,cidade:novo.cidade,phone:'',responsavel:'',freq:'Quinzenal',perfil:novo.perfil||'B',dataCad:novo.dataPed||today(),ultimoContato:'',ultimoPedido:novo.dataPed||'',ngStatus:'nao',obs:'Convertido da prospecção',updatedAt:nowTs()};
     clientes.push(novoCliente);DB.set('clientes',clientes);toast('✅ Prospect fechado e cliente criado automaticamente!');
   }
   prospects.unshift(novo);DB.set('prospects',prospects);
@@ -1063,9 +1084,9 @@ function editarProspect(id){
     const stAnt=p.status;
     const stNovo=document.getElementById('ep-status').value;
     const idx=prospects.findIndex(x=>x.id===id);
-    prospects[idx]={...prospects[idx],nome,cidade:document.getElementById('ep-cidade').value.trim(),origem:document.getElementById('ep-origem').value,perfil:document.getElementById('ep-perfil').value,status:stNovo,dataProsp:document.getElementById('ep-data').value,dataPed:document.getElementById('ep-data-ped').value,valorPed:parseFloat(document.getElementById('ep-valor').value)||0,obs:document.getElementById('ep-obs').value.trim()};
+    prospects[idx]={...prospects[idx],nome,cidade:document.getElementById('ep-cidade').value.trim(),origem:document.getElementById('ep-origem').value,perfil:document.getElementById('ep-perfil').value,status:stNovo,dataProsp:document.getElementById('ep-data').value,dataPed:document.getElementById('ep-data-ped').value,valorPed:parseFloat(document.getElementById('ep-valor').value)||0,obs:document.getElementById('ep-obs').value.trim(),updatedAt:nowTs()};
     if(stNovo==='Fechado'&&stAnt!=='Fechado'){
-      const novoCliente={id:nextId('C',clientes),nome,cidade:prospects[idx].cidade,phone:'',responsavel:'',freq:'Quinzenal',perfil:prospects[idx].perfil,dataCad:prospects[idx].dataPed||today(),ultimoContato:'',ultimoPedido:prospects[idx].dataPed||'',ngStatus:'nao',obs:'Convertido da prospecção'};
+      const novoCliente={id:nextId('C',clientes),nome,cidade:prospects[idx].cidade,phone:'',responsavel:'',freq:'Quinzenal',perfil:prospects[idx].perfil,dataCad:prospects[idx].dataPed||today(),ultimoContato:'',ultimoPedido:prospects[idx].dataPed||'',ngStatus:'nao',obs:'Convertido da prospecção',updatedAt:nowTs()};
       clientes.push(novoCliente);DB.set('clientes',clientes);toast('✅ Cliente criado automaticamente!');
     }
     DB.set('prospects',prospects);renderProspeccao();
